@@ -1,0 +1,22 @@
+{
+  "name": "levels_test",
+  "version": "0.0.0",
+  "authors": [
+    "SamhainG <gavrilyk.oleg@gmail.com>"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public/libraries",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "~3.3.1",
+    "moment": "~2.8.4",
+    "underscore": "~1.7.0"
+  }
+}

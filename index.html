@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+    <title>Пример подсчета позиций для уровней</title>
+    <link href="./public/libraries/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./public/libraries/bootstrap/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+    <link href="./public/css/theme.css" rel="stylesheet">
+</head>
+
+<body role="document">
+
+<!-- Fixed navbar -->
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Денег на личном счету: <span id="moneyBalance">0 грн.</span></a>
+        </div>
+    </div>
+</nav>
+
+
+<div class="container theme-showcase" role="main">
+    <div class="page-header">
+        <h1>Объявления</h1>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ID</th>
+                    <th>Уровень</th>
+                    <th>Фишки</th>
+                    <th>ТОП</th>
+                    <th>Дата обновления</th>
+                </tr>
+                </thead>
+                <tbody id="searchResults"></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="convertPopup" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="modalTitle">Объявление ID <span id="levelID"></span></h4>
+                </div>
+                <div class="modal-body">
+                    <h3 class="text-center">Текущая позиция: <span class="text-info" id="currentPosition"></span></h3>
+
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="levelInput" class="col-md-offset-2 col-md-3 control-label">ТОП</label>
+
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="levelInput">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="levelPeriod" class="col-md-offset-2 col-md-3 control-label">На период</label>
+
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="levelPeriod">
+
+                                    <div class="input-group-addon">дней</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-offset-5 col-md-10">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" id="refreshDate" checked="checked"> Обновить дату
+                                        публикации
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-md-offset-2 col-md-10">
+                                <dl class="dl-horizontal">
+                                    <dt>Выбрано на</dt>
+                                    <dd class="text-muted" id="levelPrice"></dd>
+                                    <dt>Доступно</dt>
+                                    <dd class="text-success" id="levelMoney"></dd>
+                                    <dt>Останется на счету</dt>
+                                    <dd class="text-warning" id="levelBalance"></dd>
+                                    <dt>Прогнозируемая позиция</dt>
+                                    <dd class="text-primary" id="predictedPosition"></dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Закрыть</button>
+                    <button type="button" id="levelConvert" class="btn btn-primary">Конвертировать</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+<script src="./public/libraries/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="./public/libraries/moment/moment.js"></script>
+<script src="./public/libraries/underscore/underscore.js"></script>
+<script src="./public/js/searchResults.js"></script>
+<script>
+    (function (searchResults) {
+        var topResults = searchResults.slice(0, 100),
+                prices = {
+                    fishki: 1,
+                    top: 40,
+                    level: 1
+                },
+                container = $('#searchResults'),
+                money = 0,
+                moneyBalance = 0;
+
+        function calculateMoney(fiski, top) {
+            return fiski * prices.fishki + top * prices.top;
+        }
+
+        function rebuildTable(results) {
+            container.find('tr').remove();
+            results.forEach(function (item, index) {
+                container.append($('<tr data-toggle="modal" data-target="#convertPopup" data-index="' + index + '">' +
+                '<td>' + index + '</td>' +
+                '<td>' + item.auto_id + '</td>' +
+                '<td><span class="label label-warning">ТОП ' + (item.level || 0) + '</span></td>' +
+                '<td>' + item.fishki + '</td>' +
+                '<td>' + item.expiried_date + '</td>' +
+                '<td>' + item.add_date + '</td>' +
+                '</tr>'));
+            });
+
+        }
+
+        function calculateDaysCount(topDate) {
+            return moment(topDate).diff(moment(), 'days');
+        }
+
+        function sortResults(results) {
+            var tmp = _.sortBy(results, function (itm) {
+                return -(((calculateDaysCount(itm.expiried_date) > 0 ? 1 : 2) * itm.fishki) || 0);
+            });
+            return _.sortBy(tmp, function (itm) {
+                return -((itm.level || 0) * moment(itm.add_date).valueOf());
+            });
+        }
+
+        function predictPosition(index, level, refreshDate) {
+            var item = topResults[index],
+                    _item = _.clone(item),
+                    ID = item.auto_id,
+                    _topResults = topResults.slice(0);
+            _item.level = level;
+            if (refreshDate) {
+                _item.add_date = moment().format("YYYY-MM-DD HH:mm:ss");
+            }
+            _topResults[index] = _item;
+            _topResults = sortResults(_topResults);
+            for (var indx in _topResults) {
+                if (_topResults[indx].auto_id === ID) return Number(indx);
+            }
+        }
+
+        /**
+         * Строим таблицу с первоначальными данными
+         */
+        rebuildTable(topResults);
+
+        function calculatePrice(level, period) {
+            var price = 1;
+            return level * period * price;
+        }
+
+        $('#levelInput, #levelPeriod, #refreshDate').change(function (e) {
+            var level = Number($('#levelInput').val()),
+                    period = $('#levelPeriod').val(),
+                    price = calculatePrice(level, period),
+                    index = Number($('#levelConvert').attr('data-index')),
+                    refreshDate = $("#refreshDate").prop('checked');
+
+            $('#levelPrice').text(price + ' грн.');
+            $('#levelBalance').text((money - price) + ' грн.');
+            $('#predictedPosition').text(predictPosition(index, level, refreshDate));
+        });
+
+        $('#levelConvert').click(function (e) {
+            $('#convertPopup').modal('hide');
+            var index = $(this).attr('data-index'),
+                    item = topResults[index],
+                    period = Number($('#levelPeriod').val()),
+                    level = Number($('#levelInput').val()),
+                    price = calculatePrice(level, period);
+            item.level = level;
+            item.fishki = 0;
+            item.expiried_date = moment().add(period, 'days').format("YYYY-MM-DD HH:mm:ss");
+            if ($("#refreshDate").prop('checked')) {
+                item.add_date = moment().format("YYYY-MM-DD HH:mm:ss");
+            }
+            topResults[index] = item;
+            topResults = sortResults(topResults);
+            rebuildTable(topResults);
+            moneyBalance = money + moneyBalance - price;
+            $('#moneyBalance').text(moneyBalance + ' грн.');
+        });
+
+        $('#convertPopup').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget),
+                    index = button.attr('data-index'),
+                    item = topResults[index],
+                    topCount = calculateDaysCount(item.expiried_date),
+                    defaultLevel = 1,
+                    defaultPeriod = calculateDaysCount(item.publication_expiried_date),
+                    modal = $(this),
+                    refreshDate = modal.find("#refreshDate").prop('checked'),
+                    predictedPosition = predictPosition(index, defaultLevel, refreshDate);
+            money = calculateMoney(item.fishki, topCount > 0 ? Math.ceil(topCount / 7) : 0);
+
+            while (predictedPosition > 0) {
+                predictedPosition = predictPosition(index, defaultLevel, refreshDate);
+                if (predictedPosition) {
+                    defaultLevel++;
+                }
+            }
+            var price = calculatePrice(defaultLevel, defaultPeriod);
+            modal.find('#currentPosition').text(index);
+            modal.find('#levelMoney').text(money + ' грн.');
+            modal.find('#levelBalance').text((money - price) + ' грн.');
+            modal.find('#levelID').text(item.auto_id);
+            modal.find('#levelInput').val(defaultLevel);
+            modal.find('#levelPeriod').val(defaultPeriod);
+            modal.find('#levelPrice').text(price + ' грн.');
+            modal.find('#levelConvert').attr('data-index', index);
+            modal.find('#predictedPosition').text(predictedPosition);
+        });
+    }(window.searchResults));
+</script>
+</body>
+</html>
+
+
